@@ -78,7 +78,7 @@ export default {
         if (!groups[parentCode]) {
           groups[parentCode] = { 
             formatted_code: parentCode, 
-            description: result.category_description || result.description, 
+            description: result.description, // Changed from result.category_description
             children: [] 
           };
         }
