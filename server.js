@@ -48,7 +48,7 @@ app.get('/api/search', async (req, res) => {
             ELSE parent.code
           END AS formatted_code,
           parent.code, 
-          parent.description,
+          parent.description AS category_description,
           parent.category, 
           parent.sub_category,
           0 AS rank,
@@ -62,7 +62,7 @@ app.get('/api/search', async (req, res) => {
         UNION ALL
         SELECT * FROM parent_codes
       )
-      SELECT formatted_code, code, description, category, sub_category, rank, sim
+      SELECT formatted_code, code, description, category, sub_category, rank, sim, category_description
       FROM all_codes
       ORDER BY rank DESC, sim DESC, code
       LIMIT 500`,

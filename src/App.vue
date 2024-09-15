@@ -78,7 +78,7 @@ export default {
         if (!groups[parentCode]) {
           groups[parentCode] = { 
             formatted_code: parentCode, 
-            description: result.description, 
+            description: result.category_description || result.description, 
             children: [] 
           };
         }
@@ -92,6 +92,9 @@ export default {
           if (result.formatted_code.split('.')[1].length > 1) {
             child.children.push(result);
           }
+        } else if (result.formatted_code === parentCode) {
+          // Update the parent description if this is the actual parent code
+          groups[parentCode].description = result.description;
         }
       });
 
