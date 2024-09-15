@@ -34,9 +34,11 @@ app.get('/api/search', async (req, res) => {
             ELSE code
           END AS formatted_code,
           code, description, category, sub_category,
-          ts_rank(weighted_vector, websearch_to_tsquery('english', $1)) AS rank
+          ts_rank(weighted_vector, to_tsquery('english', $1 || ':*')) AS rank,
+          similarity(description, $1) AS sim
         FROM icd_codes
-        WHERE weighted_vector @@ websearch_to_tsquery('english', $1)
+        WHERE weighted_vector @@ to_tsquery('english', $1 || ':*')
+          OR description ILIKE '%' || $1 || '%'
       ),
       parent_codes AS (
         SELECT DISTINCT ON (parent.code)
@@ -49,7 +51,8 @@ app.get('/api/search', async (req, res) => {
           parent.description,
           parent.category, 
           parent.sub_category,
-          0 AS rank
+          0 AS rank,
+          0 AS sim
         FROM icd_codes parent
         JOIN matched_codes child ON child.category = parent.code
         WHERE parent.code ~ '^[A-Z][0-9]+$' AND parent.code != child.code
@@ -59,10 +62,9 @@ app.get('/api/search', async (req, res) => {
         UNION ALL
         SELECT * FROM parent_codes
       )
-      SELECT DISTINCT ON (code) 
-        formatted_code, description, category, sub_category, rank
+      SELECT formatted_code, code, description, category, sub_category, rank, sim
       FROM all_codes
-      ORDER BY code, rank DESC
+      ORDER BY rank DESC, sim DESC, code
       LIMIT 500`,
       [query]
     );

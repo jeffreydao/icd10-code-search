@@ -1,21 +1,24 @@
 <template>
   <div id="app">
-    <h1>ICD-10-CM Code Search</h1>
-    <div class="search-container">
-      <input v-model="searchQuery" @input="debouncedSearch" type="text" placeholder="Search for ICD codes...">
-    </div>
-    <div v-if="loading">Loading...</div>
-    <div v-else-if="error">{{ error }}</div>
-    <div v-else-if="groupedResults.length === 0 && searchQuery">No results found</div>
-    <div v-else class="results">
-      <div v-for="(group, index) in groupedResults" :key="index" class="result-group">
-        <div class="result-item level-1">
-          <strong>{{ group.formatted_code }}</strong>: {{ group.description }}
-        </div>
-        <div v-for="child in group.children" :key="child.formatted_code" class="result-item level-2">
-          <strong>{{ child.formatted_code }}</strong>: {{ child.description }}
-          <div v-for="grandchild in child.children" :key="grandchild.formatted_code" class="result-item level-3">
-            <strong>{{ grandchild.formatted_code }}</strong>: {{ grandchild.description }}
+    <div class="container">
+      <h1>ICD-10-CM Code Search</h1>
+      <div class="search-container">
+        <input v-model="searchQuery" @input="debouncedSearch" type="text" placeholder="Search for ICD codes...">
+        <span class="search-icon">🔍</span>
+      </div>
+      <div v-if="loading" class="loading">Loading...</div>
+      <div v-else-if="error" class="error">{{ error }}</div>
+      <div v-else-if="groupedResults.length === 0 && searchQuery" class="no-results">No results found</div>
+      <div v-else class="results">
+        <div v-for="(group, index) in groupedResults" :key="index" class="result-group">
+          <div class="result-item level-1">
+            <strong>{{ group.formatted_code }}</strong>: {{ group.description }}
+          </div>
+          <div v-for="child in group.children" :key="child.formatted_code" class="result-item level-2">
+            <strong>{{ child.formatted_code }}</strong>: {{ child.description }}
+            <div v-for="grandchild in child.children" :key="grandchild.formatted_code" class="result-item level-3">
+              <strong>{{ grandchild.formatted_code }}</strong>: {{ grandchild.description }}
+            </div>
           </div>
         </div>
       </div>
@@ -106,45 +109,149 @@ export default {
 </script>
 
 <style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Arial', 'Helvetica', sans-serif;
+  line-height: 1.6;
+  color: #333;
+  background-color: #f9f9f9;
+}
+
 #app {
-  font-family: Arial, sans-serif;
-  max-width: 800px;
-  margin: 0 auto;
+  display: flex;
+  justify-content: center;
   padding: 20px;
 }
 
-.search-container {
-  margin-bottom: 20px;
+.container {
+  max-width: 800px;
+  width: 100%;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 2.5rem;
+  color: #2c3e50;
 }
 
 input {
   width: 100%;
-  padding: 10px;
+  padding: 12px 40px;
   font-size: 16px;
+  border: none;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s ease, background-color 0.3s ease;
+  background-color: #ffffff;
+}
+
+input:focus {
+  outline: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  background-color: #ffffff;
+  transform: scale(1.01);
 }
 
 .result-group {
   margin-bottom: 20px;
+  background-color: #ffffff;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  animation: fadeIn 0.3s ease-out;
+  transition: box-shadow 0.3s ease;
+}
+
+.result-group:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .result-item {
-  margin-bottom: 5px;
-  padding: 5px;
-  background-color: #f0f0f0;
-  border-radius: 4px;
+  padding: 15px;
+  border-bottom: 1px solid #e0e0e0;
+  transition: background-color 0.2s ease;
+}
+
+.result-item:last-child {
+  border-bottom: none;
+}
+
+.result-item:hover {
+  background-color: #f5f5f5;
 }
 
 .level-1 {
   font-weight: bold;
+  background-color: #E3F2FD;
+  color: #1976D2;
+  font-size: 1.1rem;
 }
 
 .level-2 {
-  margin-left: 20px;
-  background-color: #f5f5f5;
+  padding-left: 30px;
+  font-size: 1rem;
 }
 
 .level-3 {
-  margin-left: 40px;
-  background-color: #fafafa;
+  padding-left: 45px;
+  font-size: 0.95rem;
+  color: #616161;
+}
+
+.loading, .error, .no-results {
+  text-align: center;
+  padding: 20px;
+  color: #757575;
+  font-style: italic;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+.loading {
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9e9e9e;
+  pointer-events: none;
+  transition: color 0.2s ease;
+}
+
+.search-container:hover .search-icon {
+  color: #1976D2;
+}
+
+#app {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+.container {
+  max-width: 800px;
+  width: 100%;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.search-container {
+  position: relative;
+  margin-bottom: 20px;
 }
 </style>
