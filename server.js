@@ -26,12 +26,45 @@ app.get('/api/search', async (req, res) => {
 
   try {
     const result = await pool.query(
-      `SELECT code, description 
-       FROM icd_codes
-       WHERE code ILIKE $1 OR description ILIKE $1 
-       ORDER BY code 
-       LIMIT 100`,
-      [`%${query}%`]
+      `WITH matched_codes AS (
+        SELECT 
+          CASE 
+            WHEN LENGTH(code) > 3 
+            THEN CONCAT(LEFT(code, 3), '.', SUBSTRING(code, 4))
+            ELSE code
+          END AS formatted_code,
+          code, description, category, sub_category,
+          ts_rank(weighted_vector, websearch_to_tsquery('english', $1)) AS rank
+        FROM icd_codes
+        WHERE weighted_vector @@ websearch_to_tsquery('english', $1)
+      ),
+      parent_codes AS (
+        SELECT DISTINCT ON (parent.code)
+          CASE 
+            WHEN LENGTH(parent.code) > 3 
+            THEN CONCAT(LEFT(parent.code, 3), '.', SUBSTRING(parent.code, 4))
+            ELSE parent.code
+          END AS formatted_code,
+          parent.code, 
+          parent.description,
+          parent.category, 
+          parent.sub_category,
+          0 AS rank
+        FROM icd_codes parent
+        JOIN matched_codes child ON child.category = parent.code
+        WHERE parent.code ~ '^[A-Z][0-9]+$' AND parent.code != child.code
+      ),
+      all_codes AS (
+        SELECT * FROM matched_codes
+        UNION ALL
+        SELECT * FROM parent_codes
+      )
+      SELECT DISTINCT ON (code) 
+        formatted_code, description, category, sub_category, rank
+      FROM all_codes
+      ORDER BY code, rank DESC
+      LIMIT 500`,
+      [query]
     );
     res.json(result.rows);
   } catch (error) {

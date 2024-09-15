@@ -6,17 +6,25 @@
     </div>
     <div v-if="loading">Loading...</div>
     <div v-else-if="error">{{ error }}</div>
-    <div v-else-if="results.length === 0 && searchQuery">No results found</div>
+    <div v-else-if="groupedResults.length === 0 && searchQuery">No results found</div>
     <div v-else class="results">
-      <div v-for="result in results" :key="result.code" class="result-item">
-        <strong>{{ result.code }}</strong>: {{ result.description }}
+      <div v-for="(group, index) in groupedResults" :key="index" class="result-group">
+        <div class="result-item level-1">
+          <strong>{{ group.formatted_code }}</strong>: {{ group.description }}
+        </div>
+        <div v-for="child in group.children" :key="child.formatted_code" class="result-item level-2">
+          <strong>{{ child.formatted_code }}</strong>: {{ child.description }}
+          <div v-for="grandchild in child.children" :key="grandchild.formatted_code" class="result-item level-3">
+            <strong>{{ grandchild.formatted_code }}</strong>: {{ grandchild.description }}
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import debounce from 'lodash/debounce';
 
 export default {
@@ -60,9 +68,35 @@ export default {
       }
     });
 
+    const groupedResults = computed(() => {
+      const groups = {};
+      results.value.forEach(result => {
+        const parentCode = result.formatted_code.split('.')[0];
+        if (!groups[parentCode]) {
+          groups[parentCode] = { 
+            formatted_code: parentCode, 
+            description: result.description, 
+            children: [] 
+          };
+        }
+        if (result.formatted_code.includes('.')) {
+          const childCode = result.formatted_code.split('.')[0] + '.' + result.formatted_code.split('.')[1][0];
+          let child = groups[parentCode].children.find(c => c.formatted_code === childCode);
+          if (!child) {
+            child = { formatted_code: childCode, description: result.description, children: [] };
+            groups[parentCode].children.push(child);
+          }
+          if (result.formatted_code.split('.')[1].length > 1) {
+            child.children.push(result);
+          }
+        }
+      });
+      return Object.values(groups).sort((a, b) => a.formatted_code.localeCompare(b.formatted_code));
+    });
+
     return {
       searchQuery,
-      results,
+      groupedResults,
       loading,
       error,
       debouncedSearch
@@ -89,10 +123,28 @@ input {
   font-size: 16px;
 }
 
+.result-group {
+  margin-bottom: 20px;
+}
+
 .result-item {
-  margin-bottom: 10px;
-  padding: 10px;
+  margin-bottom: 5px;
+  padding: 5px;
   background-color: #f0f0f0;
   border-radius: 4px;
+}
+
+.level-1 {
+  font-weight: bold;
+}
+
+.level-2 {
+  margin-left: 20px;
+  background-color: #f5f5f5;
+}
+
+.level-3 {
+  margin-left: 40px;
+  background-color: #fafafa;
 }
 </style>
