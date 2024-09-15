@@ -94,7 +94,35 @@ export default {
           }
         }
       });
-      return Object.values(groups).sort((a, b) => a.formatted_code.localeCompare(b.formatted_code));
+
+      // Custom sorting function for ICD-10 codes
+      const sortICDCodes = (a, b) => {
+        const [aBase, aExt] = a.formatted_code.split('.');
+        const [bBase, bExt] = b.formatted_code.split('.');
+        
+        if (aBase !== bBase) {
+          return aBase.localeCompare(bBase);
+        }
+        
+        if (!aExt && !bExt) return 0;
+        if (!aExt) return -1;
+        if (!bExt) return 1;
+        
+        return aExt.localeCompare(bExt);
+      };
+
+      // Sort the groups, children, and grandchildren
+      return Object.values(groups)
+        .sort(sortICDCodes)
+        .map(group => ({
+          ...group,
+          children: group.children
+            .sort(sortICDCodes)
+            .map(child => ({
+              ...child,
+              children: child.children.sort(sortICDCodes)
+            }))
+        }));
     });
 
     return {
