@@ -1,26 +1,98 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <div id="app">
+    <h1>ICD-10-CM Code Search</h1>
+    <div class="search-container">
+      <input v-model="searchQuery" @input="debouncedSearch" type="text" placeholder="Search for ICD codes...">
+    </div>
+    <div v-if="loading">Loading...</div>
+    <div v-else-if="error">{{ error }}</div>
+    <div v-else-if="results.length === 0 && searchQuery">No results found</div>
+    <div v-else class="results">
+      <div v-for="result in results" :key="result.code" class="result-item">
+        <strong>{{ result.code }}</strong>: {{ result.description }}
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import { ref, watch } from 'vue';
+import debounce from 'lodash/debounce';
 
 export default {
   name: 'App',
-  components: {
-    HelloWorld
+  setup() {
+    const searchQuery = ref('');
+    const results = ref([]);
+    const loading = ref(false);
+    const error = ref(null);
+
+    const search = async () => {
+      if (searchQuery.value.length < 3) {
+        results.value = [];
+        return;
+      }
+
+      loading.value = true;
+      error.value = null;
+
+      try {
+        const response = await fetch(`http://localhost:3000/api/search?query=${encodeURIComponent(searchQuery.value)}`);
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        results.value = await response.json();
+      } catch (err) {
+        console.error('Error:', err);
+        error.value = 'An error occurred while searching';
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const debouncedSearch = debounce(() => {
+      search();
+    }, 300);
+
+    watch(searchQuery, () => {
+      if (searchQuery.value.length < 3) {
+        results.value = [];
+      }
+    });
+
+    return {
+      searchQuery,
+      results,
+      loading,
+      error,
+      debouncedSearch
+    };
   }
 }
 </script>
 
 <style>
 #app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+  font-family: Arial, sans-serif;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.search-container {
+  margin-bottom: 20px;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+}
+
+.result-item {
+  margin-bottom: 10px;
+  padding: 10px;
+  background-color: #f0f0f0;
+  border-radius: 4px;
 }
 </style>
